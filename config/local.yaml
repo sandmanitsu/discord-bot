@@ -1,0 +1,9 @@
+end: "local"
+application:
+  api_key: "bot API_KEY"
+  app_id: "appID"
+  guild_id: "GuildId | ServerId"
+
+model:
+  api_key: "API_KEY Hugging face"
+  api_url: "https://api-inference.huggingface.co/models/microsoft/DialoGPT-medium"
