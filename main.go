@@ -24,8 +24,8 @@ var (
 var (
 	RemoveCommands = flag.Bool("rmcmd", true, "Remove all commands after shutdowning or not")
 
-	integerOptionMinValue = 1.0
-	dmPermission          = false
+	// integerOptionMinValue = 1.0
+	// dmPermission          = false
 	// defaultMemberPermissions int64 = discordgo.Permissionna
 
 	commands = []*discordgo.ApplicationCommand{
