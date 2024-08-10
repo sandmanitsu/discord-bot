@@ -3,3 +3,7 @@ application:
   api_key: "" // bot token
   app_id: "" // appId
   guild_id: "" // guildID
+
+model:
+  api_key: "" // api key Hugging Face
+  api_url: "https://api-inference.huggingface.co/models/microsoft/DialoGPT-medium"
