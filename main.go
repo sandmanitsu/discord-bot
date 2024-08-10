@@ -7,7 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"sc-bot/internal/config"
-	"sc-bot/internal/message"
+	"sc-bot/internal/model"
 	"syscall"
 
 	"github.com/bwmarrin/discordgo"
@@ -16,7 +16,7 @@ import (
 var (
 	BotToken string
 	AppID    string
-	GuildID  string
+	GuildID  string // "1216051459053977621" test server
 )
 
 // var sess *discordgo.Session
@@ -32,6 +32,15 @@ var (
 		{
 			Name:        "message",
 			Description: "ask your question",
+			Type:        discordgo.ChatApplicationCommand,
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        "text",
+					Description: "type your question",
+					Required:    true,
+				},
+			},
 		},
 	}
 
@@ -48,7 +57,10 @@ var (
 				panic(err)
 			}
 
-			s.ChannelMessageSend(i.ChannelID, message.GetMessage())
+			data := i.ApplicationCommandData()
+			newMessage := data.Options[0].StringValue()
+
+			s.ChannelMessageSend(i.ChannelID, model.Dialog(newMessage))
 		},
 	}
 )
