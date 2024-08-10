@@ -1,5 +1,5 @@
 end: "local"
 application:
-  api_key: ""
-  app_id: ""
-  guild_id: ""
+  api_key: "" // bot token
+  app_id: "" // appId
+  guild_id: "" // guildID
