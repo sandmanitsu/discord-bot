@@ -1,66 +1,83 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"os"
 	"os/signal"
+	"sc-bot/internal/config"
+	"sc-bot/internal/message"
 	"syscall"
 
 	"github.com/bwmarrin/discordgo"
 )
 
-const (
-	BotToken = "MTI2Nzc2NjM0Mzg1NjQyNzExOQ.GYCBy3.FgHYq9hvTQX26UaJoA6vNeKBeD_XdjTuMkvaV8"
-	AppID    = "1267766343856427119"
-	GuildID  = "1216051459053977621" // tested server Id
+var (
+	BotToken string
+	AppID    string
+	GuildID  string
 )
 
-var sess *discordgo.Session
+// var sess *discordgo.Session
 
 var (
-	commands = []discordgo.ApplicationCommand{
+	RemoveCommands = flag.Bool("rmcmd", true, "Remove all commands after shutdowning or not")
+
+	integerOptionMinValue = 1.0
+	dmPermission          = false
+	// defaultMemberPermissions int64 = discordgo.Permissionna
+
+	commands = []*discordgo.ApplicationCommand{
 		{
-			Name: "hello",
-			Type: discordgo.ChatApplicationCommand,
+			Name:        "message",
+			Description: "ask your question",
 		},
 	}
 
 	commandsHandler = map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){
-		"hello": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
-			s.ChannelMessageSend(i.ChannelID, "world!")
+		"message": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+			err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Content: "Thinking....",
+					Flags:   discordgo.MessageFlagsEphemeral,
+				},
+			})
+			if err != nil {
+				panic(err)
+			}
+
+			s.ChannelMessageSend(i.ChannelID, message.GetMessage())
 		},
 	}
 )
 
+func init() {
+	config := config.MustLoad()
+
+	BotToken = config.Application.BotToken
+	AppID = config.Application.AppID
+	GuildID = config.Application.GuildID
+}
+
 func main() {
+	flag.Parse()
+
 	sess, err := discordgo.New("Bot " + BotToken)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// sess.AddHandler(func(s *discordgo.Session, m *discordgo.MessageCreate) {
-	// 	if m.Author.ID == s.State.User.ID {
-	// 		return
-	// 	}
-
-	// 	if m.Content == "hello" {
-	// 		s.ChannelMessageSend(m.ChannelID, "world!")
-	// 	}
-	// })
-
-	cmdIDs := make(map[string]string, len(commands))
-
-	for _, cmd := range commands {
-		rcmd, err := sess.ApplicationCommandCreate(AppID, GuildID, &cmd)
-		if err != nil {
-			log.Fatal(err)
+	sess.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+		if h, ok := commandsHandler[i.ApplicationCommandData().Name]; ok {
+			h(s, i)
 		}
+	})
 
-		cmdIDs[rcmd.ID] = rcmd.Name
-	}
-
-	sess.Identify.Intents = discordgo.IntentsAllWithoutPrivileged
+	sess.AddHandler(func(s *discordgo.Session, r *discordgo.Ready) {
+		log.Printf("Logged in as: %v#%v", s.State.User.Username, s.State.User.Discriminator)
+	})
 
 	err = sess.Open()
 	if err != nil {
@@ -68,9 +85,32 @@ func main() {
 	}
 	defer sess.Close()
 
+	registeredCommands := make([]*discordgo.ApplicationCommand, len(commands))
+	for i, v := range commands {
+		cmd, err := sess.ApplicationCommandCreate(sess.State.User.ID, GuildID, v)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		registeredCommands[i] = cmd
+	}
+
 	fmt.Println("the bot is online!")
 
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
 	<-sc
+
+	if *RemoveCommands {
+		log.Println("Removing commands...")
+
+		for _, v := range registeredCommands {
+			err := sess.ApplicationCommandDelete(sess.State.User.ID, GuildID, v.ID)
+			if err != nil {
+				log.Panicf("Cannot delete '%v' command: %v", v.Name, err)
+			}
+		}
+	}
+
+	log.Println("Shutting down.")
 }
