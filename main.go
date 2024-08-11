@@ -16,17 +16,11 @@ import (
 var (
 	BotToken string
 	AppID    string
-	GuildID  string // "1216051459053977621" test server
+	GuildID  string
 )
-
-// var sess *discordgo.Session
 
 var (
 	RemoveCommands = flag.Bool("rmcmd", true, "Remove all commands after shutdowning or not")
-
-	// integerOptionMinValue = 1.0
-	// dmPermission          = false
-	// defaultMemberPermissions int64 = discordgo.Permissionna
 
 	commands = []*discordgo.ApplicationCommand{
 		{

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -61,12 +62,17 @@ func Request(messages string) string {
 		var errorResponse ErrorResponse
 		err = json.Unmarshal(body, &errorResponse)
 		if err == nil && errorResponse.Error != "" {
-			fmt.Printf("Model loading, wait for %f second...and try again\n", errorResponse.EstimatedTime)
+			fmt.Printf("Model loading, waiting for %f second...and will try again\n", errorResponse.EstimatedTime)
 			time.Sleep(time.Duration(errorResponse.EstimatedTime) * time.Second)
 			continue
 		}
 
 		var responseBody []ResponseBody
+
+		if strings.HasPrefix(string(body), "<") {
+			return "Sorry, i didn't hear you, ask again"
+		}
+
 		err = json.Unmarshal(body, &responseBody)
 		if err != nil {
 			fmt.Printf("Error decoding JSON: %s", err)
