@@ -38,8 +38,16 @@ var (
 		},
 		{
 			Name:        "play",
-			Description: "choose a track",
-			Type:        discordgo.ChatApplicationCommand,
+			Description: "choose a song",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        "track",
+					Description: "take one",
+					Required:    true,
+					Choices:     model.GetChoices(),
+				},
+			},
 		},
 	}
 
@@ -73,7 +81,9 @@ var (
 				panic(err)
 			}
 
-			s.ChannelMessageSend(i.ChannelID, model.Play())
+			option := i.ApplicationCommandData().Options[0].StringValue()
+
+			s.ChannelMessageSend(i.ChannelID, model.Play(option))
 		},
 	}
 )

@@ -58,20 +58,30 @@ func tokenFromFile(file string) (*oauth2.Token, error) {
 	return tok, err
 }
 
+type ListFiles struct {
+	Name string
+	Id   string
+}
+
 // todo to other file
-func ListFilesInFolder(srv *drive.Service, folderID string) {
+func ListFilesInFolder(srv *drive.Service, folderID string) []ListFiles {
 	query := fmt.Sprintf("'%s' in parents", folderID)
 	r, err := srv.Files.List().Q(query).Fields("nextPageToken, files(id, name)").Do()
 	if err != nil {
 		log.Fatalf("Unable to retrieve files: %v", err)
 	}
 
-	fmt.Println("Files:")
+	list := make([]ListFiles, 0)
 	if len(r.Files) == 0 {
 		fmt.Println("No files found.")
 	} else {
 		for _, i := range r.Files {
-			fmt.Printf("%s (%s)\n", i.Name, i.Id)
+			list = append(list, ListFiles{
+				Name: i.Name,
+				Id:   i.Id,
+			})
 		}
 	}
+
+	return list
 }
