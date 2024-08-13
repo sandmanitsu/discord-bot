@@ -1,7 +1,9 @@
 package model
 
 import (
+	"fmt"
 	"sc-bot/internal/config"
+	"sc-bot/internal/disk"
 	"sc-bot/internal/messages"
 )
 
@@ -26,4 +28,15 @@ func Dialog(newMessage string) string {
 	// MessageHistory.AppendToHistory("user", newMessage)
 
 	return Request(newMessage)
+}
+
+func Play() string {
+	service, err := disk.GetService()
+	if err != nil {
+		fmt.Printf("Error getting service: %v", err)
+	}
+
+	disk.ListFilesInFolder(service, "1KaLJMxkFQ8daK39Sl8Do6jgeFDTkDlD7")
+
+	return "play"
 }

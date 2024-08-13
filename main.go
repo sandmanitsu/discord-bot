@@ -36,6 +36,11 @@ var (
 				},
 			},
 		},
+		{
+			Name:        "play",
+			Description: "choose a track",
+			Type:        discordgo.ChatApplicationCommand,
+		},
 	}
 
 	commandsHandler = map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){
@@ -55,6 +60,20 @@ var (
 			newMessage := data.Options[0].StringValue()
 
 			s.ChannelMessageSend(i.ChannelID, model.Dialog(newMessage))
+		},
+		"play": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+			err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Content: "Thinking....",
+					Flags:   discordgo.MessageFlagsEphemeral,
+				},
+			})
+			if err != nil {
+				panic(err)
+			}
+
+			s.ChannelMessageSend(i.ChannelID, model.Play())
 		},
 	}
 )
