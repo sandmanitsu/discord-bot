@@ -70,10 +70,27 @@ var (
 			s.ChannelMessageSend(i.ChannelID, model.Dialog(newMessage))
 		},
 		"play": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
-			err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			userID := i.Member.User.ID
+			member, err := s.GuildMember(GuildID, userID)
+			if err != nil {
+				err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					Type: discordgo.InteractionResponseChannelMessageWithSource,
+					Data: &discordgo.InteractionResponseData{
+						Content: "User not found....",
+						Flags:   discordgo.MessageFlagsEphemeral,
+					},
+				})
+				if err != nil {
+					panic(err)
+				}
+
+				return
+			}
+
+			err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
 				Data: &discordgo.InteractionResponseData{
-					Content: "Thinking....",
+					Content: "Start play to " + member.User.Username,
 					Flags:   discordgo.MessageFlagsEphemeral,
 				},
 			})
@@ -81,9 +98,22 @@ var (
 				panic(err)
 			}
 
-			option := i.ApplicationCommandData().Options[0].StringValue()
+			guild, err := s.State.Guild(GuildID)
+			if err != nil {
+				return
+			}
 
-			s.ChannelMessageSend(i.ChannelID, model.Play(option))
+			audioID := i.ApplicationCommandData().Options[0].StringValue()
+
+			for _, vs := range guild.VoiceStates {
+				if vs.UserID == member.User.ID {
+					s.ChannelMessageSend(i.ChannelID, model.Play(s, audioID, vs.ChannelID))
+
+					return
+				}
+			}
+
+			s.ChannelMessageSend(i.ChannelID, "Join any channel!")
 		},
 	}
 )
