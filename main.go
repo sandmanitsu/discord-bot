@@ -49,6 +49,10 @@ var (
 				},
 			},
 		},
+		{
+			Name:        "stop",
+			Description: "stop playing",
+		},
 	}
 
 	commandsHandler = map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){
@@ -114,6 +118,20 @@ var (
 			}
 
 			s.ChannelMessageSend(i.ChannelID, "Join any channel!")
+		},
+		"stop": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+			err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Content: "Stop play audio...",
+					Flags:   discordgo.MessageFlagsEphemeral,
+				},
+			})
+			if err != nil {
+				panic(err)
+			}
+
+			s.ChannelMessageSend(i.ChannelID, model.Stop())
 		},
 	}
 )

@@ -6,41 +6,30 @@ import (
 	"io"
 	"log"
 	"os/exec"
-	"sc-bot/internal/config"
 	"sc-bot/internal/disk"
-	"sc-bot/internal/messages"
 	"strings"
+	"sync"
 
 	"github.com/bwmarrin/discordgo"
 	"layeh.com/gopus"
 )
 
 var (
-	Token    string
-	ModelURL string
-	GuildId  string
-
-	MessageHistory messages.MessageHistory
+	isPlaying bool
+	mutex     sync.Mutex
+	voice     *discordgo.VoiceConnection
+	ffmpeg    *exec.Cmd
 )
 
-func init() {
-	config := config.MustLoad()
-
-	Token = config.Model.Token
-	ModelURL = config.Model.ModelURL
-	GuildId = config.Application.GuildID
-
-	MessageHistory = *messages.New()
-}
-
-func Dialog(newMessage string) string {
-	// todo проверить использует ли бот историю диалога
-	// MessageHistory.AppendToHistory("user", newMessage)
-
-	return Request(newMessage)
-}
-
 func Play(s *discordgo.Session, id string, channelId string) string {
+	mutex.Lock()
+	if isPlaying {
+		mutex.Unlock()
+		return "Трек уже играет, дождитесь окончания."
+	}
+	isPlaying = true
+	mutex.Unlock()
+
 	audioURL := "https://drive.google.com/uc?export=download&id=" + id
 
 	voice, err := s.ChannelVoiceJoin(GuildId, channelId, false, false)
@@ -49,7 +38,7 @@ func Play(s *discordgo.Session, id string, channelId string) string {
 	}
 	defer voice.Disconnect()
 
-	ffmpeg := exec.Command("ffmpeg", "-i", audioURL, "-f", "s16le", "-ar", "48000", "-ac", "2", "pipe:1")
+	ffmpeg = exec.Command("ffmpeg", "-i", audioURL, "-f", "s16le", "-ar", "48000", "-ac", "2", "pipe:1")
 	ffmpegStdout, err := ffmpeg.StdoutPipe()
 	if err != nil {
 		log.Fatalf("Error creating StdoutPipe for FFmpeg: %v", err)
@@ -84,6 +73,10 @@ func Play(s *discordgo.Session, id string, channelId string) string {
 			voice.OpusSend <- opusData
 		}
 		if err == io.EOF {
+			mutex.Lock()
+			isPlaying = false
+			mutex.Unlock()
+
 			fmt.Println("End of stream")
 			break
 		}
@@ -92,7 +85,10 @@ func Play(s *discordgo.Session, id string, channelId string) string {
 		}
 	}
 
-	ffmpeg.Wait()
+	err = ffmpeg.Wait()
+	if err != nil {
+		fmt.Printf("Error ending ffmpeg: %v", err)
+	}
 	return "Finished playing audio"
 }
 
@@ -102,6 +98,7 @@ func GetChoices() []*discordgo.ApplicationCommandOptionChoice {
 		fmt.Printf("Error getting service: %v", err)
 	}
 
+	// todo может быть стоит перенести набор папок в конфиг????
 	list := disk.ListFilesInFolder(service, "1KaLJMxkFQ8daK39Sl8Do6jgeFDTkDlD7") // Rainy Nights Of 1988
 	choices := []*discordgo.ApplicationCommandOptionChoice{}
 
@@ -123,4 +120,25 @@ func formatName(name string) string {
 	}
 
 	return "can't read a name"
+}
+
+func Stop() string {
+	mutex.Lock()
+	defer mutex.Unlock()
+
+	if isPlaying {
+		// Прерываем процесс ffmpeg
+		if ffmpeg != nil && ffmpeg.Process != nil {
+			ffmpeg.Process.Kill()
+		}
+		isPlaying = false
+	}
+
+	// Отключаем бота от голосового канала
+	if voice != nil {
+		voice.Disconnect()
+		voice = nil
+	}
+
+	return "Stop playing audio"
 }
