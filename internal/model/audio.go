@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math/rand"
 	"os/exec"
 	"sc-bot/internal/disk"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
 	"layeh.com/gopus"
@@ -25,7 +27,7 @@ func Play(s *discordgo.Session, id string, channelId string) string {
 	mutex.Lock()
 	if isPlaying {
 		mutex.Unlock()
-		return "Трек уже играет, дождитесь окончания."
+		return "Track already play, use /stop"
 	}
 	isPlaying = true
 	mutex.Unlock()
@@ -141,4 +143,24 @@ func Stop() string {
 	}
 
 	return "Stop playing audio"
+}
+
+func GetRandomTrack() string {
+	service, err := disk.GetService()
+	if err != nil {
+		fmt.Printf("Error getting service: %v", err)
+	}
+
+	list := disk.ListFilesInFolder(service, "1ORRwndJayZhgSB0ZQ9aT7W0D3intMOVf") // Tracks
+
+	// random number generator
+	source := rand.NewSource(time.Now().UnixNano())
+	r := rand.New(source)
+
+	min := 0
+	max := len(list)
+
+	randomNumber := r.Intn(max-min+1) + min
+
+	return list[randomNumber].Id
 }
