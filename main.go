@@ -57,6 +57,10 @@ var (
 			Name:        "random",
 			Description: "play random tracks",
 		},
+		{
+			Name:        "autoplay",
+			Description: "endless tracks",
+		},
 	}
 
 	commandsHandler = map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){
@@ -159,6 +163,52 @@ var (
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
 				Data: &discordgo.InteractionResponseData{
 					Content: "Start play to " + member.User.Username,
+					Flags:   discordgo.MessageFlagsEphemeral,
+				},
+			})
+			if err != nil {
+				panic(err)
+			}
+
+			guild, err := s.State.Guild(GuildID)
+			if err != nil {
+				return
+			}
+
+			audioID := model.GetRandomTrack()
+
+			for _, vs := range guild.VoiceStates {
+				if vs.UserID == member.User.ID {
+					s.ChannelMessageSend(i.ChannelID, model.Play(s, audioID, vs.ChannelID))
+
+					return
+				}
+			}
+
+			s.ChannelMessageSend(i.ChannelID, "Join any channel!")
+		},
+		"autoplay": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+			userID := i.Member.User.ID
+			member, err := s.GuildMember(GuildID, userID)
+			if err != nil {
+				err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					Type: discordgo.InteractionResponseChannelMessageWithSource,
+					Data: &discordgo.InteractionResponseData{
+						Content: "User not found....",
+						Flags:   discordgo.MessageFlagsEphemeral,
+					},
+				})
+				if err != nil {
+					panic(err)
+				}
+
+				return
+			}
+
+			err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Content: "Start play audio...",
 					Flags:   discordgo.MessageFlagsEphemeral,
 				},
 			})

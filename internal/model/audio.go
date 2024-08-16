@@ -23,6 +23,12 @@ var (
 	ffmpeg    *exec.Cmd
 )
 
+// google drive folder id
+const (
+	RainyNightsOf1988 = "1KaLJMxkFQ8daK39Sl8Do6jgeFDTkDlD7"
+	OtherTracks       = "1ORRwndJayZhgSB0ZQ9aT7W0D3intMOVf"
+)
+
 func Play(s *discordgo.Session, id string, channelId string) string {
 	mutex.Lock()
 	if isPlaying {
@@ -68,7 +74,7 @@ func Play(s *discordgo.Session, id string, channelId string) string {
 				pcmData[i] = int16(binary.LittleEndian.Uint16(buffer[i*2 : (i+1)*2]))
 			}
 
-			opusData, err := opusEncoder.Encode(pcmData, 960, 4000)
+			opusData, err := opusEncoder.Encode(pcmData, 960, 8000)
 			if err != nil {
 				log.Fatalf("Error encoding PCM to Opus: %v", err)
 			}
@@ -101,7 +107,7 @@ func GetChoices() []*discordgo.ApplicationCommandOptionChoice {
 	}
 
 	// todo может быть стоит перенести набор папок в конфиг????
-	list := disk.ListFilesInFolder(service, "1KaLJMxkFQ8daK39Sl8Do6jgeFDTkDlD7") // Rainy Nights Of 1988
+	list := disk.ListFilesInFolder(service, RainyNightsOf1988) // folder: Rainy Nights Of 1988
 	choices := []*discordgo.ApplicationCommandOptionChoice{}
 
 	for _, v := range list {
@@ -151,16 +157,33 @@ func GetRandomTrack() string {
 		fmt.Printf("Error getting service: %v", err)
 	}
 
-	list := disk.ListFilesInFolder(service, "1ORRwndJayZhgSB0ZQ9aT7W0D3intMOVf") // Tracks
+	list := disk.ListFilesInFolder(service, OtherTracks)
 
+	return list[randomNumber(len(list))].Id
+}
+
+func randomNumber(max int) int {
 	// random number generator
 	source := rand.NewSource(time.Now().UnixNano())
 	r := rand.New(source)
 
 	min := 0
-	max := len(list)
 
-	randomNumber := r.Intn(max-min+1) + min
+	return r.Intn(max-min+1) + min
+}
 
-	return list[randomNumber].Id
+func Autoplay(s *discordgo.Session, channelId string) string {
+	service, err := disk.GetService()
+	if err != nil {
+		fmt.Printf("Error getting service: %v", err)
+	}
+
+	list := disk.ListFilesInFolder(service, OtherTracks)
+	countTraks := len(list)
+
+	for i := 0; i < countTraks; i++ {
+		_ = Play(s, list[randomNumber(countTraks)].Id, channelId)
+	}
+
+	return "Finished playing list of tracks"
 }
