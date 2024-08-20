@@ -221,11 +221,9 @@ var (
 				return
 			}
 
-			audioID := model.GetRandomTrack()
-
 			for _, vs := range guild.VoiceStates {
 				if vs.UserID == member.User.ID {
-					s.ChannelMessageSend(i.ChannelID, model.Play(s, audioID, vs.ChannelID))
+					s.ChannelMessageSend(i.ChannelID, model.Autoplay(s, vs.ChannelID))
 
 					return
 				}
